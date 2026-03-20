@@ -47,16 +47,6 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
-            steps {
-                echo '🐳 Building Docker image...'
-                sh '''
-                    docker build -t ${REGISTRY}/${DOCKER_IMAGE}:${DOCKER_TAG} .
-                    docker tag ${REGISTRY}/${DOCKER_IMAGE}:${DOCKER_TAG} ${REGISTRY}/${DOCKER_IMAGE}:latest
-                '''
-            }
-        }
-
         stage('Push to Docker Registry') {
             steps {
                 echo '📤 Pushing Docker image to Docker Hub...'
@@ -92,30 +82,22 @@ pipeline {
                 '''
             }
         }
-
-        stage('Cleanup') {
-            when {
-                success()
-            }
-            steps {
-                echo '🧹 Cleaning up test container...'
-                sh '''
-                    docker stop my-website-container || true
-                    docker rm my-website-container || true
-                '''
-            }
-        }
     }
 
     post {
+        always {
+            echo '🧹 Cleaning up test container...'
+            sh '''
+                docker stop my-website-container || true
+                docker rm my-website-container || true
+            '''
+            cleanWs()
+        }
         success {
             echo '✅ Pipeline succeeded! App is ready to deploy.'
         }
         failure {
             echo '❌ Pipeline failed. Check logs above.'
-        }
-        always {
-            cleanWs()  // Clean workspace after build
         }
     }
 }
