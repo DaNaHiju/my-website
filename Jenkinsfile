@@ -84,7 +84,7 @@ pipeline {
 
     post {
         always {
-            node {
+            node('any') {
                 echo '🧹 Cleaning up test container...'
                 sh 'docker stop my-website-container || true && docker rm my-website-container || true'
                 cleanWs()
