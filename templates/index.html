@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section id="hero" class="hero-section">
+    <div class="container hero-content">
+        <h1 class="name">{{ cv.name }}</h1>
+        <h2 class="title">{{ cv.title }}</h2>
+        <p class="summary">{{ cv.summary }}</p>
+        <div class="hero-actions">
+            <a href="#contact" class="btn btn-primary">Contact Me</a>
+            <a href="#experience" class="btn btn-secondary">View Work</a>
+        </div>
+    </div>
+</section>
+
+<section id="experience" class="section">
+    <div class="container">
+        <h2 class="section-title">Experience</h2>
+        <div class="timeline">
+            {% for job in cv.experience %}
+            <div class="timeline-item">
+                <div class="timeline-date">{{ job.duration }}</div>
+                <div class="timeline-content">
+                    <h3>{{ job.role }}</h3>
+                    <h4>{{ job.company }}</h4>
+                    <p>{{ job.description }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<section id="skills" class="section bg-light">
+    <div class="container">
+        <h2 class="section-title">Technical Skills</h2>
+        <div class="skills-grid">
+            {% for skill in cv.skills %}
+            <div class="skill-card">
+                <i class="fas fa-code"></i> <!-- Placeholder icon, could be dynamic -->
+                <span>{{ skill }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<section id="education" class="section">
+    <div class="container">
+        <h2 class="section-title">Education</h2>
+        {% for edu in cv.education %}
+        <div class="education-item">
+            <h3>{{ edu.degree }}</h3>
+            <h4>{{ edu.school }}</h4>
+            <span class="year">{{ edu.year }}</span>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<section id="contact" class="section">
+    <div class="container text-center">
+        <h2 class="section-title">Get In Touch</h2>
+        <p>Interested in working together or discussing DevOps practices?</p>
+        <a href="mailto:email@example.com" class="btn btn-primary">Send Email</a>
+        <div class="social-links">
+            <a href="#"><i class="fab fa-github"></i></a>
+            <a href="#"><i class="fab fa-linkedin"></i></a>
+            <a href="#"><i class="fab fa-twitter"></i></a>
+        </div>
+    </div>
+</section>
+{% endblock %}
