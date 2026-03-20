@@ -2,11 +2,11 @@ pipeline {
     agent any
 
     environment {
-        GITHUB_REPO = 'github.com/your-username/my-website'  // Change to your GitHub repo
         DOCKER_IMAGE = 'my-website'
-        DOCKER_TAG = "${BUILD_NUMBER}"  // Build number from Jenkins
-        REGISTRY = 'docker.io'  // Docker Hub or your registry
-        REGISTRY_CREDENTIALS = 'docker-credentials'  // Jenkins credentials ID
+        DOCKER_TAG = "${BUILD_NUMBER}"
+        REGISTRY = 'docker.io'
+        REGISTRY_CREDENTIALS = 'docker-credentials'
+        DOCKER_HUB_USERNAME = credentials('${REGISTRY_CREDENTIALS}')
     }
 
     stages {
@@ -17,23 +17,22 @@ pipeline {
             }
         }
 
-        stage('Setup & Install Dependencies') {
+        stage('Build Docker Image') {
             steps {
-                echo '🔧 Setting up Python environment...'
+                echo '🐳 Building Docker image for testing...'
                 sh '''
-                    python --version
-                    pip install --upgrade pip
-                    pip install -r requirements.txt
+                    docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} .
+                    docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest
                 '''
             }
         }
 
-        stage('Run Tests') {
+        stage('Run Tests in Docker') {
             steps {
-                echo '✅ Running tests...'
+                echo '✅ Running tests in Docker container...'
                 sh '''
-                    pip install pytest pytest-flask
-                    pytest -v tests/ || true
+                    docker run --rm ${DOCKER_IMAGE}:${DOCKER_TAG} \
+                        sh -c "pip install pytest pytest-flask && pytest -v tests/"
                 '''
             }
         }
@@ -42,8 +41,8 @@ pipeline {
             steps {
                 echo '🔍 Checking code quality...'
                 sh '''
-                    pip install pylint
-                    pylint app.py || true
+                    docker run --rm ${DOCKER_IMAGE}:${DOCKER_TAG} \
+                        sh -c "pip install pylint && pylint app.py || true"
                 '''
             }
         }
@@ -60,24 +59,27 @@ pipeline {
 
         stage('Push to Docker Registry') {
             steps {
-                echo '📤 Pushing Docker image to registry...'
+                echo '📤 Pushing Docker image to Docker Hub...'
                 withCredentials([usernamePassword(credentialsId: "${REGISTRY_CREDENTIALS}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh '''
                         echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                        docker push ${REGISTRY}/${DOCKER_IMAGE}:${DOCKER_TAG}
-                        docker push ${REGISTRY}/${DOCKER_IMAGE}:latest
+                        docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_USER}/${DOCKER_IMAGE}:${DOCKER_TAG}
+                        docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_USER}/${DOCKER_IMAGE}:latest
+                        docker push ${DOCKER_USER}/${DOCKER_IMAGE}:${DOCKER_TAG}
+                        docker push ${DOCKER_USER}/${DOCKER_IMAGE}:latest
                     '''
                 }
             }
         }
 
-        stage('Deploy to Staging') {
+        stage('Deploy Locally for Testing') {
             steps {
-                echo '🚀 Deploying to staging environment...'
+                echo '🚀 Deploying Docker container...'
                 sh '''
-                    docker-compose -f docker-compose.yml down || true
-                    docker-compose -f docker-compose.yml up -d
-                    sleep 5
+                    docker stop my-website-container || true
+                    docker rm my-website-container || true
+                    docker run -d -p 5000:5000 --name my-website-container ${DOCKER_IMAGE}:${DOCKER_TAG}
+                    sleep 3
                 '''
             }
         }
@@ -87,6 +89,19 @@ pipeline {
                 echo '🏥 Performing health check...'
                 sh '''
                     curl -f http://localhost:5000/health || exit 1
+                '''
+            }
+        }
+
+        stage('Cleanup') {
+            when {
+                success()
+            }
+            steps {
+                echo '🧹 Cleaning up test container...'
+                sh '''
+                    docker stop my-website-container || true
+                    docker rm my-website-container || true
                 '''
             }
         }
