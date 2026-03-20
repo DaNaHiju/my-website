@@ -4,9 +4,7 @@ pipeline {
     environment {
         DOCKER_IMAGE = 'my-website'
         DOCKER_TAG = "${BUILD_NUMBER}"
-        REGISTRY = 'docker.io'
         REGISTRY_CREDENTIALS = 'docker-credentials'
-        DOCKER_HUB_USERNAME = credentials('${REGISTRY_CREDENTIALS}')
     }
 
     stages {
@@ -86,12 +84,11 @@ pipeline {
 
     post {
         always {
-            echo '🧹 Cleaning up test container...'
-            sh '''
-                docker stop my-website-container || true
-                docker rm my-website-container || true
-            '''
-            cleanWs()
+            node {
+                echo '🧹 Cleaning up test container...'
+                sh 'docker stop my-website-container || true && docker rm my-website-container || true'
+                cleanWs()
+            }
         }
         success {
             echo '✅ Pipeline succeeded! App is ready to deploy.'
